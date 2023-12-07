@@ -146,7 +146,7 @@ def prepare_action_list_from_ckpt(init_state, ckpt_path, sess_path, save_name='h
                 'headless': True, 'save_final_state': True, 'early_stop': False,
                 'action_freq': 24, 'init_state': init_state, 'max_steps': ep_length, 
                 'print_rewards': True, 'save_video': False, 'fast_video': True, 'session_path': sess_path,
-                'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': False
+                'gb_path': 'game/PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': False
             }
     
     env = make_env(0, env_config)() #SubprocVecEnv([make_env(i, env_config) for i in range(num_cpu)])
@@ -242,21 +242,21 @@ def port_recorded_action(state_file, sess_name, save_name, headless=True):
                 'headless': headless, 'save_final_state': True, 'early_stop': False,
                 'action_freq': 24, 'init_state': state_file, 'max_steps': ep_length, 
                 'print_rewards': True, 'save_video': False, 'fast_video': True, 'session_path': sess_path,
-                'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': False
+                'gb_path': 'game/PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': False
             }
     env = make_env(0, env_config)()
     return env, action_list
 
 
 # For analysis on the recorded actions
-sess_name = 'session_healer_01'
+sess_name = 'logs/session_healer_01'
 sess_path = Path(f'{sess_name}')
 
-for step_num in [81920, 163840]
+
 step_num = 1064960
 ckpt_path = f'{sess_name}/poke_{str(step_num)}_steps'
 
-init_state_folder = 'session_trainer/lack_of_health_states'
+init_state_folder = 'logs/session_trainer/lack_of_health_states'
 init_states = glob.glob(init_state_folder+'/*.state')
 state_file = init_states[0]
 

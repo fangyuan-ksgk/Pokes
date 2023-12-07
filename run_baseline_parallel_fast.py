@@ -35,9 +35,9 @@ if __name__ == '__main__':
 
 
     ep_length = 2048 * 10
-    sess_path = Path(f'session_healer_01')
+    sess_path = Path(f'logs/session_healer_01')
     # Branch from Trainer Session
-    init_state_folder = 'session_trainer/lack_of_health_states'
+    init_state_folder = 'logs/session_trainer/lack_of_health_states'
     init_states = glob.glob(init_state_folder+'/*.state')
     
     num_cpu = 4
@@ -47,7 +47,7 @@ if __name__ == '__main__':
             'headless': True, 'save_final_state': True, 'early_stop': False,
             'action_freq': 24, 'init_state': init_state, 'max_steps': ep_length, 
             'print_rewards': True, 'save_video': True, 'fast_video': True, 'session_path': sess_path,
-            'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 
+            'gb_path': 'game/PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 
             'use_screen_explore': True, 'reward_scale': 4, 'extra_buttons': False,
             'explore_weight': 3 # 2.5
         }
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     # file_name = '2increment_GPTreward_context_reward_iter2/poke_4587520_steps'
     
     # Complete Empty Policy Checkpoint
-    file_name = 'session_healer_01/poke_0_steps'
+    file_name = 'logs/session_healer_01/poke_0_steps'
 
     if exists(file_name + '.zip'):
         print('\nloading checkpoint')

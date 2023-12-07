@@ -15,12 +15,10 @@ def make_env(env_conf, seed=0):
     return _init
 
 if __name__ == '__main__':
-    sess_path = Path(f'session_play')
+    sess_path = Path(f'logs/session_play')
     ep_length = 2**23
-    # state_file = '/Users/fangyuanyu/Implementation/Agent/PokemonRedExperiments/baselines/trainer_session_1d6b9883/lack_of_health_states/lack_of_health_in_battle_447.state'
-    # state_file = 
     import glob
-    init_state_folder = 'session_trainer/lack_of_health_states'
+    init_state_folder = 'logs/session_trainer/lack_of_health_states'
     init_states = glob.glob(init_state_folder+'/*.state')
     state_file = init_states[0]
 
@@ -28,7 +26,7 @@ if __name__ == '__main__':
                 'headless': False, 'save_final_state': False, 'early_stop': False,
                 'action_freq': 24, 'init_state': state_file, 'max_steps': ep_length, 
                 'print_rewards': True, 'save_video': False, 'fast_video': True, 'session_path': sess_path,
-                'gb_path': '../PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': True
+                'gb_path': 'game/PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': True
             }
     
     env = make_env(env_config)()
