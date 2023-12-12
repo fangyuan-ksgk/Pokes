@@ -335,7 +335,8 @@ class RedGymEnv(Env):
         # Change it here to monitor how the negative reward is obtained
         if new_step < 0 and self.read_hp_fraction() > 0:
             #print(f'\n\nreward went down! {self.progress_reward}\n\n')
-            self.save_screenshot('neg_reward')
+            # self.save_screenshot('neg_reward')
+            1 + 1
     
         self.total_reward = new_total
         return (new_step, 
@@ -492,9 +493,9 @@ class RedGymEnv(Env):
             if self.last_health > 0:
                 heal_amount = cur_health - self.last_health
                 self.heal_amount = heal_amount
-                if heal_amount > 0.5:
-                    print(f'healed: {heal_amount}')
-                    self.save_screenshot('healing')
+                # if heal_amount > 0.5:
+                print(f'healed: {heal_amount}')
+                self.save_screenshot('healing')
                 self.total_healing_rew += heal_amount * 4
             else:
                 self.died_count += 1

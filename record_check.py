@@ -14,6 +14,8 @@ from collections import defaultdict
 import cv2
 import numpy as np
 
+
+
 context_dict = {0: 'in_battle', 1: 'need_heal', 2: 'need_progress', 3: 'need_level_up'}
 
 # Pad Image and Add Text to Paadded areas
@@ -29,7 +31,9 @@ def pad_img_with_text(img_pix, text='Hello', pad_height=20):
 def update_hist_rew(info, reward_history):
     for key, value in info['rewards'].items():
         reward_history[key].append(value)
-    reward_history['context'].append(info['context'])
+    context = 1
+    reward_history['context'].append(context)
+    # reward_history['context'].append(info['context'])
     reward_history['total_reward'].append(info['total_reward'])
     return reward_history
 
@@ -111,7 +115,7 @@ def visualize_reward_dynamic(img_game, reward_history):
     total_reward = reward_history['total_reward'][-1]
     img_game = pad_img_with_text(img_game, text=f"C: {context} | R: {total_reward}")
 
-    explore_reward = draw_reward_dynamic_plot(reward_history, 'explore', x_window=300, y_window=30)
+    explore_reward = draw_reward_dynamic_plot(reward_history, 'explore', x_window=300, y_window=5)
     if context == 'need_heal':
         heal_reward = draw_reward_dynamic_plot(reward_history, 'heal', x_window=300, y_window=100)
         img_reward = np.concatenate((heal_reward, explore_reward), axis=0)
@@ -242,7 +246,7 @@ def port_recorded_action(state_file, sess_name, save_name, headless=True):
                 'headless': headless, 'save_final_state': True, 'early_stop': False,
                 'action_freq': 24, 'init_state': state_file, 'max_steps': ep_length, 
                 'print_rewards': True, 'save_video': False, 'fast_video': True, 'session_path': sess_path,
-                'gb_path': 'game/PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': False
+                'gb_path': 'game/PokemonRed.gb', 'debug': False, 'sim_frame_dist': 2_000_000.0, 'extra_buttons': False,
             }
     env = make_env(0, env_config)()
     return env, action_list
@@ -253,7 +257,7 @@ sess_name = 'logs/session_healer_01'
 sess_path = Path(f'{sess_name}')
 
 
-step_num = 1064960
+step_num = 163840
 ckpt_path = f'{sess_name}/poke_{str(step_num)}_steps'
 
 init_state_folder = 'logs/session_trainer/lack_of_health_states'
@@ -266,25 +270,53 @@ save_name = 'ckpt_{step_num}_wtf'
 # prepare_action_list_from_ckpt(state_file, ckpt_path, sess_path, save_name)
 
 # Load recorded action & env
-env, action_list = port_recorded_action(state_file, sess_name, save_name, headless=True)
+env, action_list = port_recorded_action(state_file, sess_name, save_name,
+                                        headless=False)
 
 # Run & Visualize Policy performance
-reward_history = defaultdict(list)
-os.makedirs(f'{sess_name}/inspection', exist_ok=True)
-vid_path = f'{sess_name}/inspection/{save_name}_visualize.mp4'
-policy_writer = media.VideoWriter(vid_path, (164, 242), fps=20)
-policy_writer.__enter__()
-obs, info = env.reset()
-for action in action_list:
-    obs, rewards, term, trunc, info = env.step(action)
-    update_hist_rew(info, reward_history)
-    img_game = env.render(reduce_res=False, update_mem=False)
-    img_game = visualize_reward_dynamic(img_game, reward_history)
-    # print('\n Shape: ', img_game.shape)
-    policy_writer.add_image(img_game.astype(np.uint8))
+# reward_history = defaultdict(list)
+# os.makedirs(f'{sess_name}/inspection', exist_ok=True)
+# vid_path = f'{sess_name}/inspection/{save_name}_visualize.mp4'
+# policy_writer = media.VideoWriter(vid_path, (164, 242), fps=20)
+# policy_writer.__enter__()
+# obs, info = env.reset()
+# for action in action_list:
+#     obs, rewards, term, trunc, info = env.step(action)
+#     update_hist_rew(info, reward_history)
+#     img_game = env.render(reduce_res=False, update_mem=False)
+#     img_game = visualize_reward_dynamic(img_game, reward_history)
+#     # print('\n Shape: ', img_game.shape)
+#     policy_writer.add_image(img_game.astype(np.uint8))
 
-policy_writer.close()
-env.close()
+# policy_writer.close()
+# env.close()
+
+# Can I interactively visualize the reward value?
+
+
+n_repeat = 5
+for _ in range(n_repeat):
+    print('--- Iteration Begins ----')
+    # This is to simulate the training scenarios, memory of AC map is kept
+    reward_history = defaultdict(list)
+    obs, info = env.reset()
+    print('--- Number of valid AC location: ', len(env.mapAC.pheromone_map.keys()))
+    n_step = 0
+    while n_step <= 500:
+        action = 5 # pass action
+        obs, rewards, terminated, truncated, info = env.step(action)
+        update_hist_rew(info, reward_history)
+        done = terminated or truncated
+        if done:
+            print('Done!')
+            break
+        img_game = env.render(reduce_res=False, update_mem=False)
+        img_game = visualize_reward_dynamic(img_game, reward_history)
+        cv2.imshow('img', img_game.astype(np.uint8))
+        cv2.waitKey(1)
+        n_step += 1
+
+
 
 
 # Expected behavior: heal reward never triggered, unless the pokemon levels up
@@ -295,3 +327,5 @@ env.close()
 # save_state_for_lack_of_health_context(env, action_list, sess_name)
 
 # Two ways ahead: 1. Separate policy for healing mode
+
+

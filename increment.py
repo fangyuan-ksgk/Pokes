@@ -84,7 +84,9 @@ class GroundEnv(RedGymEnv):
     
     def _get_terminate_condition(self):
         # Terminate condition for each sub-policy
-        terminate = 'status' in self.info and self.info['status']['death_count'] >= 1
+        die = 'status' in self.info and self.info['status']['death_count'] >= 1
+        # fully_healed = 'status' in self.info and self.info['status']['pokemon_hp_fraction'] == 1 and not die
+        terminate = die
         return terminate
 
     # Add termination condition to insist on repetitive training within a specific scenario
@@ -140,6 +142,7 @@ class GroundEnv(RedGymEnv):
 
         # Pokemon Level & Status -- not in battle | pokemon with no levels are not pokemon!
         pokemon_hp_fractions = self.read_hp_fractions()
+        pokemon_hp_fraction = self.read_hp_fraction()
         pokemon_levels = self.get_pokemon_levels()
         pokemon_types = self.read_party()
 
@@ -165,6 +168,7 @@ class GroundEnv(RedGymEnv):
         status['wild_pokemon_battle'] = wild_pokemon_battle
         status['trainer_battle'] = trainer_battle
         status['pokemon_hp_fractions'] = pokemon_hp_fractions
+        status['pokemon_hp_fraction'] = pokemon_hp_fraction
         status['pokemon_levels'] = pokemon_levels
         status['pokemon_types'] = pokemon_types
         status['x_pos'] = x_pos
@@ -181,7 +185,8 @@ class GroundEnv(RedGymEnv):
     # LLM -- Revised Reward Function
     def get_game_state_reward(self, print_stats=False):
         # fetch game status
-        status = self._get_current_status()  
+        status = self._get_current_status() 
+        prev_status = self.info['status'] if 'status' in self.info else {}
 
         # Initialize rewards: Add extra rewards if needed (LLM)
         rewards = {
@@ -206,11 +211,12 @@ class GroundEnv(RedGymEnv):
         # (LLM) Calculate rewards for each sub-policy
         
         # Escape Battle -- Reward for escaping battle
-        if not status['wild_pokemon_battle'] and self.info != {} and self.info['status']['wild_pokemon_battle'] > 0:
+        if not status['wild_pokemon_battle'] and prev_status != {} and prev_status['wild_pokemon_battle']:
             rewards['escape_battle'] += 10
+            print('----Escaped!')
         
         # Full-Health Recover -- After Escape Battle, Visit Pokemon Center
-        if status['healing_amount'] > 0 and status['pokemon_hp_fractions'][0] == 1:
+        if status['healing_amount'] > 0 and status['pokemon_hp_fraction'] == 1:
             pokemon_center_visit_reward = 1000
             self.mapAC.excite(status['x_pos'], status['y_pos'], status['map_n'], pokemon_center_visit_reward)
             rewards['heal'] += pokemon_center_visit_reward
