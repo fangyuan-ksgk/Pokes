@@ -5,6 +5,8 @@ from red_gym_env import RedGymEnv
 # LLM can do planning, I can build some decomposable tools, which can be trained with sub-reward functions
 # designed by the LLM, since these sub-task is much more simple than play the entire game, I expect the result to be better
 
+# Ant-search algorithm leaves dense reward in the map, which can be used to design dense reward function
+
 # I will ignore the CNN navigation for now ... (Generalize to other maps is a problem)
 # Each Map_n can be decomposed into a set of sub-tasks, which can be trained with sub-reward functions
 # Battle & Non-Battle should be dealt with separately
@@ -36,8 +38,30 @@ class GroundEnv(RedGymEnv):
             'visit-map-position': 'Visit a specific location on map'
         }
         self.sub_policy = self._determine_sub_policy()
+        # Ant Colony algorithm for Path Finding
+        self.mapAC = self._init_map_ac()
         super().__init__(env_config)
-
+        
+    def _init_map_ac(self, evap_rate=0.8):
+        # Initialize Ant Colony algorithm for path finding
+        import collections.defaultdict
+        class mapAC:
+            def __init__(self, evap_rate):
+                self.evap_rate = evap_rate
+                self.time = -1
+                self.pheromone_map = defaultdict(float)
+            
+            def excite(self, x, y, map, reward):
+                self.pheromone_map[(x, y, map)] += reward
+                
+            def time_elapse(self):
+                self.time += 1
+                
+            def get_pheromone(self, x, y, map):
+                self.pheromone_map[(x, y, map)] *= (self.evap_rate**(max(self.time, 0)))
+                
+                    
+        return mapAC(evap_rate)
         
     def _determine_sub_policy(self):
         # Determine which sub-policy to use, given the current game state
@@ -56,6 +80,10 @@ class GroundEnv(RedGymEnv):
         self.done_count += int(terminate)
         done = done or (self.done_count>1) # allow a term before terminate
         return done
+    
+    def _router(self):
+        # Router to determine which sub-policy to use
+        pass
     
         
     # This will be the status of the Game used for designing reward & termination condition and sub-policy
@@ -149,7 +177,7 @@ class GroundEnv(RedGymEnv):
             'battle_damage': 0 if self.info=={} else self.info['rewards']['battle_damage'],
             'battle_loss': 0 if self.info=={} else self.info['rewards']['battle_loss'],
             'efficiency': 0,
-            'existence': 0 if self.info=={} else self.info['rewards']['existence'],
+            'existence': 0 if self.info=={} else self.info['rewards']['existence'] - 0.1, # urgency
             'type_advantage': 0,
             'death_penalty': -100 * status['death_count'],
             'explore': status['exploration_reward'],
@@ -162,6 +190,23 @@ class GroundEnv(RedGymEnv):
 
         # (LLM) Calculate rewards for each sub-policy
         
+        # Escape Battle -- Reward for escaping battle
+        if not status['wild_pokemon_battle'] and self.info != {} and self.info['status']['wild_pokemon_battle'] > 0:
+            rewards['escape_battle'] += 10
+        
+        # Full-Health Recover -- After Escape Battle, Visit Pokemon Center
+        if status['healing_reward'] > 0 and status['pokemon_hp_fractions'][0] == 1:
+            pokemon_center_visit_reward = 1000
+            self.mapAC.excite(status['x_pos'], status['y_pos'], status['map_n'], pokemon_center_visit_reward)
+            rewards['heal'] += pokemon_center_visit_reward
+        
+        # During Map Exploration, we want to visit the pokemon center to heal
+        if not status['in_battle']:
+            pheromone_addictive_reward = self.mapAC.get_pheromone(status['x_pos'], status['y_pos'], status['map_n'])
+            rewards['heal'] += pheromone_addictive_reward
+            
+        self.mapAC.time_elapse()
+            
         
         # Store current information
         total_reward = sum([val for _, val in rewards.items()])
