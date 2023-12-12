@@ -73,11 +73,16 @@ class GroundEnv(RedGymEnv):
         # This can be used to design dense reward function
         pass
     
+    def _get_terminate_condition(self):
+        # Terminate condition for each sub-policy
+        terminate = 'status' in self.info and self.info['status']['death_count'] > 1
+        return terminate
+
     # Add termination condition to insist on repetitive training within a specific scenario
     def check_if_done(self):
         # In healing mode, we terminate episode when pokemon dies, to repeat the training untill it figures out how to get healed
         done = super().check_if_done()
-        terminate = False
+        terminate = self._get_terminate_condition()
         self.done_count += int(terminate)
         done = done or (self.done_count>1) # allow a term before terminate
         return done
