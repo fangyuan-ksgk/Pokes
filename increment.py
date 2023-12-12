@@ -37,10 +37,11 @@ class GroundEnv(RedGymEnv):
             'explore-map': 'Explore the map', # Leaving pins in the map can be a good idea to design dense reward to re-visit these places
             'visit-map-position': 'Visit a specific location on map'
         }
-        self.sub_policy = self._determine_sub_policy()
+        
         # Ant Colony algorithm for Path Finding
         self.mapAC = self._init_map_ac()
         super().__init__(env_config)
+        self.sub_policy = self._determine_sub_policy()
         
     def _init_map_ac(self, evap_rate=0.8):
         # Initialize Ant Colony algorithm for path finding
@@ -64,9 +65,17 @@ class GroundEnv(RedGymEnv):
                     
         return mapAC(evap_rate)
         
-    def _determine_sub_policy(self):
+    # Built specificly for lack of health scenarios
+    def _determine_sub_policy(self, status={}):
         # Determine which sub-policy to use, given the current game state
-        pass
+        if status == {}:
+            status = self._get_current_status()
+        
+        # In battle, we escape, Out of battle, we heal
+        if status['in_battle']:
+            return 'escape-battle'
+        else:
+            return 'heal_pokemon'
 
     def put_position_pin(self):
         # Put a pin on the map, so that the agent can visit this location later
@@ -75,7 +84,7 @@ class GroundEnv(RedGymEnv):
     
     def _get_terminate_condition(self):
         # Terminate condition for each sub-policy
-        terminate = 'status' in self.info and self.info['status']['death_count'] > 1
+        terminate = 'status' in self.info and self.info['status']['death_count'] >= 1
         return terminate
 
     # Add termination condition to insist on repetitive training within a specific scenario
@@ -162,7 +171,7 @@ class GroundEnv(RedGymEnv):
         status['y_pos'] = y_pos
         status['map_n'] = map_n
         status['max_opponent_level'] = self.max_opponent_level
-        status['healing_reward'] = healing_reward
+        status['healing_amount'] = self.heal_amount
         status['death_count'] = death_count
         status['max_event_reward'] = max_event_reward
         status['exploration_reward'] = exploration_reward
@@ -178,7 +187,7 @@ class GroundEnv(RedGymEnv):
         rewards = {
             'event': status['max_event_reward'], 
             'level': max(status['pokemon_levels']) * 10,
-            'heal': status['healing_reward'],
+            'heal': 0 if self.info=={} else self.info['rewards']['heal'],
             'battle_power_advantage': 0,
             'battle_damage': 0 if self.info=={} else self.info['rewards']['battle_damage'],
             'battle_loss': 0 if self.info=={} else self.info['rewards']['battle_loss'],
@@ -201,7 +210,7 @@ class GroundEnv(RedGymEnv):
             rewards['escape_battle'] += 10
         
         # Full-Health Recover -- After Escape Battle, Visit Pokemon Center
-        if status['healing_reward'] > 0 and status['pokemon_hp_fractions'][0] == 1:
+        if status['healing_amount'] > 0 and status['pokemon_hp_fractions'][0] == 1:
             pokemon_center_visit_reward = 1000
             self.mapAC.excite(status['x_pos'], status['y_pos'], status['map_n'], pokemon_center_visit_reward)
             rewards['heal'] += pokemon_center_visit_reward

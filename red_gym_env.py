@@ -48,6 +48,7 @@ class RedGymEnv(Env):
         self.instance_id = str(uuid.uuid4())[:8] if 'instance_id' not in config else config['instance_id']
         self.s_path.mkdir(exist_ok=True)
         self.reset_count = 0
+        self.heal_amount = 0
         self.all_runs = []
         self.info = {}
 
@@ -151,6 +152,7 @@ class RedGymEnv(Env):
         self.max_opponent_level = 5
         self.max_event_rew = 0
         self.max_level_rew = 0
+        self.heal_amount = 0
         self.last_health = 1
         self.total_healing_rew = 0
         self.died_count = 0
@@ -489,6 +491,7 @@ class RedGymEnv(Env):
         if cur_health > self.last_health:
             if self.last_health > 0:
                 heal_amount = cur_health - self.last_health
+                self.heal_amount = heal_amount
                 if heal_amount > 0.5:
                     print(f'healed: {heal_amount}')
                     self.save_screenshot('healing')
