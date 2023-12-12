@@ -44,7 +44,8 @@ class GroundEnv(RedGymEnv):
         
     def _init_map_ac(self, evap_rate=0.8):
         # Initialize Ant Colony algorithm for path finding
-        import collections.defaultdict
+        import collections
+        from collections import defaultdict
         class mapAC:
             def __init__(self, evap_rate):
                 self.evap_rate = evap_rate
@@ -59,7 +60,7 @@ class GroundEnv(RedGymEnv):
                 
             def get_pheromone(self, x, y, map):
                 self.pheromone_map[(x, y, map)] *= (self.evap_rate**(max(self.time, 0)))
-                
+                return self.pheromone_map[(x, y, map)]
                     
         return mapAC(evap_rate)
         
@@ -166,7 +167,7 @@ class GroundEnv(RedGymEnv):
     # LLM -- Revised Reward Function
     def get_game_state_reward(self, print_stats=False):
         # fetch game status
-        status = self.check_status()  
+        status = self._get_current_status()  
 
         # Initialize rewards: Add extra rewards if needed (LLM)
         rewards = {
