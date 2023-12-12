@@ -48,20 +48,38 @@ class GroundEnv(RedGymEnv):
         import collections
         from collections import defaultdict
         class mapAC:
-            def __init__(self, evap_rate):
+            def __init__(self, evap_rate, initial_discount=0.1, excite_discount=0.8):
                 self.evap_rate = evap_rate
+                self.initial_discount = initial_discount
+                self.excite_discount = excite_discount
                 self.time = -1
+                self.excite_signals = list()
                 self.pheromone_map = defaultdict(float)
             
-            def excite(self, x, y, map, reward):
-                self.pheromone_map[(x, y, map)] += reward
+            def _excite(self, x, y, map, reward):
+                self.excite_signals.append(reward * self.initial_discount)
                 
-            def time_elapse(self):
+            def _time_elapse(self):
                 self.time += 1
+                self.excite_signals = [signal * self.excite_discount for signal in self.excite_signals]
+                for (x,y,map) in self.pheromone_map:
+                    self.pheromone_map[(x, y, map)] = self.pheromone_map[(x, y, map)] * self.evap_rate
+
+            def _update_pheromone(self, x, y, map):
+                self.pheromone_map[(x,y,map)] += sum([pheromone for pheromone in self.excite_signals])
+
+            def update(self, x, y, map, reward_gain = 0):
+                # Agent updates its own excitement signal
+                if reward_gain > 0:
+                    self._excite(x, y, map, reward_gain)
+                # Agent release pheromon to the map
+                self._update_pheromone(x, y, map)
+                # Map's pheromon evaporates over time && Agent's excitement signal decays over time
+                self._time_elapse()
                 
             def get_pheromone(self, x, y, map):
-                self.pheromone_map[(x, y, map)] *= (self.evap_rate**(max(self.time, 0)))
                 return self.pheromone_map[(x, y, map)]
+            
                     
         return mapAC(evap_rate)
         
@@ -202,7 +220,8 @@ class GroundEnv(RedGymEnv):
             'death_penalty': -100 * status['death_count'],
             'explore': status['exploration_reward'],
             'survival': 10 if not status['death_count'] else 0,
-            'escape_battle': 0 if self.info=={} else self.info['rewards']['escape_battle']
+            'escape_battle': 0 if self.info=={} else self.info['rewards']['escape_battle'],
+            'pheromone': 0 if self.info=={} else self.info['rewards']['pheromone']
         }
 
         # Penalize existence: 
@@ -213,16 +232,18 @@ class GroundEnv(RedGymEnv):
         # Escape Battle -- Reward for escaping battle
         if not status['wild_pokemon_battle'] and prev_status != {} and prev_status['wild_pokemon_battle']:
             rewards['escape_battle'] += 10
-            print('----Escaped!')
+            # print('----Escaped!')
         
         # Full-Health Recover -- After Escape Battle, Visit Pokemon Center
+        pokemon_center_visit_reward = 0
         if status['healing_amount'] > 0 and status['pokemon_hp_fraction'] == 1:
-            pokemon_center_visit_reward = 1000
-            self.mapAC.excite(status['x_pos'], status['y_pos'], status['map_n'], pokemon_center_visit_reward)
+            pokemon_center_visit_reward = 100
             rewards['heal'] += pokemon_center_visit_reward
         
+
         # During Map Exploration, we want to visit the pokemon center to heal
         if not status['in_battle']:
+            self.mapAC.update(status['x_pos'], status['y_pos'], status['map_n'], pokemon_center_visit_reward)
             pheromone_addictive_reward = self.mapAC.get_pheromone(status['x_pos'], status['y_pos'], status['map_n'])
             rewards['heal'] += pheromone_addictive_reward
             

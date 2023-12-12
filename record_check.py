@@ -28,6 +28,25 @@ def pad_img_with_text(img_pix, text='Hello', pad_height=20):
     pad_img = cv2.putText(pad_img, text, (0,10), cv2.FONT_HERSHEY_TRIPLEX, 0.3, (255, 0, 0))
     return pad_img
 
+# Update Gained reward from current state
+
+def update_hist_rew_gain(info, reward_history):
+    for key, value in info['rewards'].items():
+        if key in reward_history:
+            gain_value = value - reward_history[key][-1]
+        else:
+            gain_value = value
+        reward_history[key].append(gain_value)
+
+    context = 1
+    reward_history['context'].append(context)
+    if 'total_reward' in reward_history:
+        gain_total = info['total_reward'] - reward_history['total_reward'][-1]
+    else:
+        gain_total = info['total_reward']
+    reward_history['total_reward'].append(gain_total)
+    return reward_history
+
 def update_hist_rew(info, reward_history):
     for key, value in info['rewards'].items():
         reward_history[key].append(value)
@@ -45,7 +64,7 @@ def draw_reward_dynamic_plot(reward_history, name, x_window, y_window, max_index
     
     reward_history_data = reward_history[name]
     current_index = len(reward_history_data) - 1
-    current_val = reward_history_data[-1]
+    current_val = reward_history_data[current_index]
     img = np.ones((height, width, 3), dtype=np.uint8) * 255
     # Scaling factors
     max_reward = current_val + y_window
@@ -302,7 +321,7 @@ for _ in range(n_repeat):
     obs, info = env.reset()
     print('--- Number of valid AC location: ', len(env.mapAC.pheromone_map.keys()))
     n_step = 0
-    while n_step <= 500:
+    while n_step <= 300:
         action = 5 # pass action
         obs, rewards, terminated, truncated, info = env.step(action)
         update_hist_rew(info, reward_history)
