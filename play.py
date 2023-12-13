@@ -2,7 +2,7 @@
 from pathlib import Path
 import uuid
 from red_gym_env import RedGymEnv
-from increment import GroundEnv
+from increment_escape_battle import GroundEnv
 import stable_baselines3
 from stable_baselines3.common.utils import set_random_seed
 

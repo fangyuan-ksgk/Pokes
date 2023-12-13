@@ -89,36 +89,11 @@ class GroundEnv(RedGymEnv):
         if status == {}:
             status = self._get_current_status()
         
-        # Health - Strength - Progress (Three key ingredients)
-        lack_of_health = status['pokemon_hp_fraction'] < 0.3
-        lack_of_strength = max(2 * status['max_opponent_level'], status['max_opponent_level']+10) > max(status['pokemon_levels'])
-        lack_of_progress = not lack_of_health and not lack_of_strength
-        
-        in_battle = status['in_battle']
-        wild_pokemon_battle = status['wild_pokemon_battle']
-        
-        # Health
-        if lack_of_health:
-            if in_battle:
-                if wild_pokemon_battle:
-                    return 'escape-battle'
-                else:
-                    return 'fight-battle'
-            else:
-                return 'heal-pokemon'
-        # Strength
-        if lack_of_strength:
-            if in_battle:
-                return 'fight-battle'
-            else:
-                return 'find-wild-pokemon'
-        # Progression
-        if lack_of_progress:
-            if in_battle:
-                return 'fight-battle'
-            else:
-                return 'explore-map'
-        
+        # In battle, we escape, Out of battle, we heal
+        if status['in_battle']:
+            return 'escape-battle'
+        else:
+            return 'heal_pokemon'
 
     def put_position_pin(self):
         # Put a pin on the map, so that the agent can visit this location later
@@ -127,8 +102,8 @@ class GroundEnv(RedGymEnv):
     
     def _get_terminate_condition(self):
         # Terminate condition for each sub-policy -- Assumes begging with battle state
-        die = 'status' in self.info and self.info['status']['die'] == 1
-        fully_healed = 'status' in self.info and self.info['status']['pokemon_hp_fraction'] == 1 and not die
+        die = 'status' in self.info and self.info['status']['death_count'] >= 1
+        # fully_healed = 'status' in self.info and self.info['status']['pokemon_hp_fraction'] == 1 and not die
         out_of_battle = 'status' in self.info and not self.info['status']['in_battle'] and not die
         terminate = die or out_of_battle
         if terminate:
@@ -155,7 +130,6 @@ class GroundEnv(RedGymEnv):
         # LLM shall utilize ths status to translate a high-level 'train a beast' into low-level reward functions
         # which should then translate to low-level actions (decomposable ideally, so we avoid CNN completely from time to time)
         status = {}
-        prev_status = self.info['status'] if 'status' in self.info else {}
         
         # Whether the player is in battle
         in_battle = self.read_m(0xD057)
@@ -210,19 +184,6 @@ class GroundEnv(RedGymEnv):
         # Exploration reward
         exploration_reward = self.get_knn_reward()
 
-        # Temporal Event 
-        die = 'death_count' in prev_status and status['death_count'] > prev_status['death_count']
-        escape_battle_alive = 'wild_pokemon_battle' in prev_status and prev_status['wild_pokemon_battle'] and not wild_pokemon_battle and not die
-        engage_wild_battle = 'wild_pokemon_battle' in prev_status and not prev_status['wild_pokemon_battle'] and wild_pokemon_battle and not die
-        engage_trainer_battle = 'trainer_battle' in prev_status and not prev_status['trainer_battle'] and trainer_battle and not die
-        heal_pokemon = 'pokemon_hp_fraction' in prev_status and prev_status['pokemon_hp_fraction'] < 1 and status['pokemon_hp_fraction'] == 1 and not die
-        status['die'] = die 
-        status['escape_battle_alive'] = escape_battle_alive
-        status['engage_wild_battle'] = engage_wild_battle
-        status['engage_trainer_battle'] = engage_trainer_battle
-        status['heal_pokemon'] = heal_pokemon
-        
-
         # Store information inside status dictionary
         status['in_battle'] = in_battle
         status['wild_pokemon_battle'] = wild_pokemon_battle
@@ -272,15 +233,16 @@ class GroundEnv(RedGymEnv):
 
         # (LLM) Calculate rewards for each sub-policy
 
+        die = 'status' in self.info and status['death_count'] > self.info['status']['death_count']
 
         # Escape Battle -- Reward for escaping battle
-        if status['escape_battle']:
+        if not status['wild_pokemon_battle'] and prev_status != {} and prev_status['wild_pokemon_battle'] and not die:
             rewards['escape_battle'] += 10
             # print('----Escaped Alive!')
         
         # Full-Health Recover -- After Escape Battle, Visit Pokemon Center
         pokemon_center_visit_reward = 0
-        if status['heal_pokemon']:
+        if status['healing_amount'] > 0 and status['pokemon_hp_fraction'] == 1:
             pokemon_center_visit_reward = 100
             rewards['heal'] += pokemon_center_visit_reward
         

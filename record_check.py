@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import mediapy as media
 # from red_gym_env import RedGymEnv
-from increment import GroundEnv
+from increment_escape_battle import GroundEnv
 import glob, os
 from stable_baselines3 import A2C, PPO
 from stable_baselines3.common.utils import set_random_seed
@@ -272,7 +272,7 @@ def port_recorded_action(state_file, sess_name, save_name, headless=True):
 
 
 # For analysis on the recorded actions
-sess_name = 'logs/session_healer_01'
+sess_name = 'logs/session_escaper_01'
 sess_path = Path(f'{sess_name}')
 
 
@@ -283,57 +283,57 @@ init_state_folder = 'logs/session_trainer/lack_of_health_states'
 init_states = glob.glob(init_state_folder+'/*.state')
 state_file = init_states[0]
 
-save_name = 'ckpt_{step_num}_wtf'
+save_name = f'ckpt_{step_num}_wtf'
 
 # Save action using checkpoint file
-# prepare_action_list_from_ckpt(state_file, ckpt_path, sess_path, save_name)
+prepare_action_list_from_ckpt(state_file, ckpt_path, sess_path, save_name)
 
 # Load recorded action & env
 env, action_list = port_recorded_action(state_file, sess_name, save_name,
                                         headless=False)
 
 # Run & Visualize Policy performance
-# reward_history = defaultdict(list)
-# os.makedirs(f'{sess_name}/inspection', exist_ok=True)
-# vid_path = f'{sess_name}/inspection/{save_name}_visualize.mp4'
-# policy_writer = media.VideoWriter(vid_path, (164, 242), fps=20)
-# policy_writer.__enter__()
-# obs, info = env.reset()
-# for action in action_list:
-#     obs, rewards, term, trunc, info = env.step(action)
-#     update_hist_rew(info, reward_history)
-#     img_game = env.render(reduce_res=False, update_mem=False)
-#     img_game = visualize_reward_dynamic(img_game, reward_history)
-#     # print('\n Shape: ', img_game.shape)
-#     policy_writer.add_image(img_game.astype(np.uint8))
+reward_history = defaultdict(list)
+os.makedirs(f'{sess_name}/inspection', exist_ok=True)
+vid_path = f'{sess_name}/inspection/{save_name}_visualize.mp4'
+policy_writer = media.VideoWriter(vid_path, (164, 242), fps=20)
+policy_writer.__enter__()
+obs, info = env.reset()
+for action in action_list:
+    obs, rewards, term, trunc, info = env.step(action)
+    update_hist_rew(info, reward_history)
+    img_game = env.render(reduce_res=False, update_mem=False)
+    img_game = visualize_reward_dynamic(img_game, reward_history)
+    # print('\n Shape: ', img_game.shape)
+    policy_writer.add_image(img_game.astype(np.uint8))
 
-# policy_writer.close()
-# env.close()
+policy_writer.close()
+env.close()
 
 # Can I interactively visualize the reward value?
 
 
-n_repeat = 5
-for _ in range(n_repeat):
-    print('--- Iteration Begins ----')
-    # This is to simulate the training scenarios, memory of AC map is kept
-    reward_history = defaultdict(list)
-    obs, info = env.reset()
-    print('--- Number of valid AC location: ', len(env.mapAC.pheromone_map.keys()))
-    n_step = 0
-    while n_step <= 300:
-        action = 5 # pass action
-        obs, rewards, terminated, truncated, info = env.step(action)
-        update_hist_rew(info, reward_history)
-        done = terminated or truncated
-        if done:
-            print('Done!')
-            break
-        img_game = env.render(reduce_res=False, update_mem=False)
-        img_game = visualize_reward_dynamic(img_game, reward_history)
-        cv2.imshow('img', img_game.astype(np.uint8))
-        cv2.waitKey(1)
-        n_step += 1
+# n_repeat = 5
+# for _ in range(n_repeat):
+#     print('--- Iteration Begins ----')
+#     # This is to simulate the training scenarios, memory of AC map is kept
+#     reward_history = defaultdict(list)
+#     obs, info = env.reset()
+#     print('--- Number of valid AC location: ', len(env.mapAC.pheromone_map.keys()))
+#     n_step = 0
+#     while n_step <= 300:
+#         action = 5 # pass action
+#         obs, rewards, terminated, truncated, info = env.step(action)
+#         update_hist_rew(info, reward_history)
+#         done = terminated or truncated
+#         if done:
+#             print('Done!')
+#             break
+#         img_game = env.render(reduce_res=False, update_mem=False)
+#         img_game = visualize_reward_dynamic(img_game, reward_history)
+#         cv2.imshow('img', img_game.astype(np.uint8))
+#         cv2.waitKey(1)
+#         n_step += 1
 
 
 

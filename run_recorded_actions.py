@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from red_gym_env import RedGymEnv
-from increment import GroundEnv
+from increment_escape_battle import GroundEnv
 
 def run_recorded_actions_on_emulator(sess_path, instance_id, run_index=0):
     sess_path = Path(sess_path)

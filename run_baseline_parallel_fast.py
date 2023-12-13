@@ -4,7 +4,7 @@ import uuid
 import glob
 import random
 from red_gym_env import RedGymEnv
-from increment import GroundEnv
+from increment_escape_battle import GroundEnv
 from stable_baselines3 import A2C, PPO
 from stable_baselines3.common import env_checker
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
@@ -35,7 +35,8 @@ if __name__ == '__main__':
 
 
     ep_length = 2048 * 10
-    sess_path = Path(f'logs/session_healer_01')
+    sess_name = 'escaper_01'
+    sess_path = Path(f'logs/session_{sess_name}')
     # Branch from Trainer Session
     init_state_folder = 'logs/session_trainer/lack_of_health_states'
     init_states = glob.glob(init_state_folder+'/*.state')
@@ -68,7 +69,7 @@ if __name__ == '__main__':
     # file_name = '2increment_GPTreward_context_reward_iter2/poke_4587520_steps'
     
     # Complete Empty Policy Checkpoint
-    file_name = 'logs/session_healer_01/poke_0_steps'
+    file_name = f'logs/session_{sess_name}/poke_0_steps'
 
     if exists(file_name + '.zip'):
         print('\nloading checkpoint')
