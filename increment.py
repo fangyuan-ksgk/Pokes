@@ -1,4 +1,5 @@
 from red_gym_env import RedGymEnv
+from utils.pheromon import mapAC
 
 # Today's Idea
 # The reward function is simply too bad, and the agent is not progressing here...
@@ -43,45 +44,9 @@ class GroundEnv(RedGymEnv):
         super().__init__(env_config)
         self.sub_policy = self._determine_sub_policy()
         
-    def _init_map_ac(self, evap_rate=0.8):
+    def _init_map_ac(self, pheromone_half_life=400, initial_discount=0.5, excite_half_life=40):
         # Initialize Ant Colony algorithm for path finding
-        import collections
-        from collections import defaultdict
-        class mapAC:
-            def __init__(self, evap_rate, initial_discount=0.1, excite_discount=0.8):
-                self.evap_rate = evap_rate
-                self.initial_discount = initial_discount
-                self.excite_discount = excite_discount
-                self.time = -1
-                self.excite_signals = list()
-                self.pheromone_map = defaultdict(float)
-            
-            def _excite(self, x, y, map, reward):
-                self.excite_signals.append(reward * self.initial_discount)
-                
-            def _time_elapse(self):
-                self.time += 1
-                self.excite_signals = [signal * self.excite_discount for signal in self.excite_signals]
-                for (x,y,map) in self.pheromone_map:
-                    self.pheromone_map[(x, y, map)] = self.pheromone_map[(x, y, map)] * self.evap_rate
-
-            def _update_pheromone(self, x, y, map):
-                self.pheromone_map[(x,y,map)] += sum([pheromone for pheromone in self.excite_signals])
-
-            def update(self, x, y, map, reward_gain = 0):
-                # Agent updates its own excitement signal
-                if reward_gain > 0:
-                    self._excite(x, y, map, reward_gain)
-                # Agent release pheromon to the map
-                self._update_pheromone(x, y, map)
-                # Map's pheromon evaporates over time && Agent's excitement signal decays over time
-                self._time_elapse()
-                
-            def get_pheromone(self, x, y, map):
-                return self.pheromone_map[(x, y, map)]
-            
-                    
-        return mapAC(evap_rate)
+        return mapAC(pheromone_half_life, initial_discount, excite_half_life)
         
     # Built specificly for lack of health scenarios
     def _determine_sub_policy(self, status={}):
