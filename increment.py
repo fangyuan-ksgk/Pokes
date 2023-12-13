@@ -97,7 +97,7 @@ class GroundEnv(RedGymEnv):
         out_of_battle = 'status' in self.info and not self.info['status']['in_battle'] and not die
         terminate = die or out_of_battle
         if terminate:
-            print('-- Die --', die, '--Out of Battle--', out_of_battle)
+            print('-- Die --', die, '-- Out of Battle --', out_of_battle)
         return terminate
 
     # Add termination condition to insist on repetitive training within a specific scenario
@@ -176,13 +176,13 @@ class GroundEnv(RedGymEnv):
         exploration_reward = self.get_knn_reward()
 
         # Temporal Event 
-        die = 'death_count' in prev_status and status['death_count'] > prev_status['death_count']
+        die = 'death_count' in prev_status and death_count > prev_status['death_count']
         escape_battle_alive = 'wild_pokemon_battle' in prev_status and prev_status['wild_pokemon_battle'] and not wild_pokemon_battle and not die
         engage_wild_battle = 'wild_pokemon_battle' in prev_status and not prev_status['wild_pokemon_battle'] and wild_pokemon_battle and not die
         engage_trainer_battle = 'trainer_battle' in prev_status and not prev_status['trainer_battle'] and trainer_battle and not die
-        heal_pokemon = 'pokemon_hp_fraction' in prev_status and prev_status['pokemon_hp_fraction'] < 1 and status['pokemon_hp_fraction'] == 1 and not die
+        heal_pokemon = 'pokemon_hp_fraction' in prev_status and prev_status['pokemon_hp_fraction'] < 1 and pokemon_hp_fraction == 1 and not die
         status['die'] = die 
-        status['escape_battle_alive'] = escape_battle_alive
+        status['escape_wild_battle_alive'] = escape_battle_alive
         status['engage_wild_battle'] = engage_wild_battle
         status['engage_trainer_battle'] = engage_trainer_battle
         status['heal_pokemon'] = heal_pokemon
@@ -239,7 +239,7 @@ class GroundEnv(RedGymEnv):
 
 
         # Escape Battle -- Reward for escaping battle
-        if status['escape_battle']:
+        if status['escape_wild_battle_alive']:
             rewards['escape_battle'] += 10
             # print('----Escaped Alive!')
         
